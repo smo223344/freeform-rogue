@@ -29,12 +29,12 @@ make run
 
 ## Controls
 
-- **Arrow Keys**: Move the player character
-  - Up: Move +1.0 in Y axis
-  - Down: Move -1.0 in Y axis
-  - Left: Move -1.0 in X axis
-  - Right: Move +1.0 in X axis
-- **q**: Quit the game
+- **Arrow Keys** or **WASD**: Move the player character
+  - Up/W: Move +1.0 in Y axis
+  - Down/S: Move -1.0 in Y axis
+  - Left/A: Move -1.0 in X axis
+  - Right/D: Move +1.0 in X axis
+- **Q**: Quit the game
 
 ## Entity System
 

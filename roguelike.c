@@ -328,15 +328,23 @@ int main() {
 
         switch (ch) {
             case KEY_UP:
+            case 'w':
+            case 'W':
                 new_y += 1.0;
                 break;
             case KEY_DOWN:
+            case 's':
+            case 'S':
                 new_y -= 1.0;
                 break;
             case KEY_LEFT:
+            case 'a':
+            case 'A':
                 new_x -= 1.0;
                 break;
             case KEY_RIGHT:
+            case 'd':
+            case 'D':
                 new_x += 1.0;
                 break;
             case 'q':
