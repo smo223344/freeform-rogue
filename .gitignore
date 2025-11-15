@@ -1,0 +1,22 @@
+# Compiled binary
+roguelike
+
+# Object files
+*.o
+*.obj
+
+# Build artifacts
+*.a
+*.so
+*.dylib
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
