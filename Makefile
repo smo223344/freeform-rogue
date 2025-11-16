@@ -3,15 +3,20 @@ CFLAGS = -Wall -Wextra -std=c99
 LDFLAGS = -lncurses -lm
 
 TARGET = roguelike
-SRC = roguelike.c
+SRCS = roguelike.c entity.c
+OBJS = $(SRCS:.c=.o)
+HEADERS = entity.h
 
 all: $(TARGET)
 
-$(TARGET): $(SRC)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRC) $(LDFLAGS)
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
+
+%.o: %.c $(HEADERS)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) $(OBJS)
 
 run: $(TARGET)
 	./$(TARGET)
