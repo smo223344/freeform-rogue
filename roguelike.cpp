@@ -2,6 +2,7 @@
 #include <locale.h>
 #include <cmath>
 #include <vector>
+#include <string>
 #include <cstdlib>
 #include <ctime>
 #include "entity.h"
@@ -10,6 +11,18 @@
 
 // Global MOB storage
 std::vector<MOB*> mobs;
+
+// Message log
+constexpr int MAX_LOG_MESSAGES = 100;
+std::vector<std::string> message_log;
+
+void add_message(const std::string& message) {
+    message_log.push_back(message);
+    // Keep only the last MAX_LOG_MESSAGES messages
+    if (message_log.size() > MAX_LOG_MESSAGES) {
+        message_log.erase(message_log.begin());
+    }
+}
 
 // Color pair definitions
 #define COLOR_PAIR_WHITE_BLACK   1
@@ -160,6 +173,22 @@ void draw_map(Entity* player) {
         }
     }
 
+    // Display message log at the bottom of the screen
+    const int log_lines = 5;  // Show last 5 messages
+    int log_start_y = max_y - log_lines;
+    int msg_index = 0;
+
+    // Calculate which messages to show (last log_lines messages)
+    int start_msg = static_cast<int>(message_log.size()) - log_lines;
+    if (start_msg < 0) start_msg = 0;
+
+    attron(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+    for (size_t i = start_msg; i < message_log.size(); i++) {
+        mvprintw(log_start_y + msg_index, 0, "%s", message_log[i].c_str());
+        msg_index++;
+    }
+    attroff(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+
     refresh();
 }
 
@@ -238,6 +267,10 @@ int main() {
     // Create sample world
     create_sample_world();
 
+    // Welcome message
+    add_message("Welcome to the dungeon!");
+    add_message("Use WASD or arrow keys to move. Attack enemies by bumping into them.");
+
     // Main game loop
     int running = 1;
     draw_map(player);
@@ -286,12 +319,29 @@ int main() {
                 if (target_entity && target_entity->mob && target_entity != player &&
                     player->mob->is_hostile_to(target_entity->mob)) {
                     if (player->mob->can_act(MOB::ATTACK_COST)) {
+                        // Get target name for logging
+                        EntityDefinition* target_def = get_entity_definition(target_entity->definition_id);
+                        std::string target_name = (target_def && !target_def->name.empty()) ?
+                                                   target_def->name : "Enemy";
+
                         CombatResult result = Combat::resolve_attack(player->mob, target_entity->mob);
                         player->mob->spend_ap(MOB::ATTACK_COST);
                         took_action = true;
 
-                        // If we killed the target, destroy its entity
+                        // Log combat results
+                        if (!result.hit) {
+                            add_message("You miss the " + target_name + "!");
+                        } else if (result.critical) {
+                            add_message("Critical hit! You deal " + std::to_string(result.damage_dealt) +
+                                       " damage to the " + target_name + "!");
+                        } else {
+                            add_message("You hit the " + target_name + " for " +
+                                       std::to_string(result.damage_dealt) + " damage.");
+                        }
+
+                        // If we killed the target, destroy its entity and log it
                         if (result.target_killed && target_entity->mob) {
+                            add_message("The " + target_name + " is defeated!");
                             destroy_entity(target_entity);
                         }
                     }
