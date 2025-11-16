@@ -5,9 +5,9 @@
 // MOB Base Class
 // ============================================================================
 
-MOB::MOB(Entity* ent, int max_health, double ap_accumulation)
+MOB::MOB(Entity* ent, int max_health, double ap_accumulation, int faction_id)
     : entity(ent), hp(max_health), max_hp(max_health),
-      ap_rate(ap_accumulation), action_points(0.0) {
+      ap_rate(ap_accumulation), action_points(0.0), faction(faction_id) {
 }
 
 void MOB::accumulate_ap() {
@@ -34,6 +34,27 @@ void MOB::take_damage(int damage) {
 
 bool MOB::is_alive() const {
     return hp > 0;
+}
+
+// Faction management
+bool MOB::is_hostile_to(const MOB* other) const {
+    if (!other) return false;
+    // Neutral faction (0) is not hostile to anyone
+    if (faction == FACTION_NEUTRAL || other->faction == FACTION_NEUTRAL) {
+        return false;
+    }
+    // Different factions are hostile
+    return faction != other->faction;
+}
+
+bool MOB::is_ally_of(const MOB* other) const {
+    if (!other) return false;
+    // Neutral faction has no allies
+    if (faction == FACTION_NEUTRAL || other->faction == FACTION_NEUTRAL) {
+        return false;
+    }
+    // Same faction means allies
+    return faction == other->faction;
 }
 
 // Combat hooks - default implementations (can be overridden)
@@ -74,7 +95,7 @@ void MOB::on_death(MOB* killer) {
 // ============================================================================
 
 Player::Player(Entity* ent)
-    : MOB(ent, 100, 100.0) {  // 100 HP, 100 AP per turn (one action)
+    : MOB(ent, 100, 100.0, FACTION_PLAYER) {  // 100 HP, 100 AP per turn, player faction
 }
 
 void Player::take_turn() {
@@ -87,8 +108,8 @@ void Player::take_turn() {
 // Enemy Class
 // ============================================================================
 
-Enemy::Enemy(Entity* ent, int max_health, double ap_accumulation)
-    : MOB(ent, max_health, ap_accumulation) {
+Enemy::Enemy(Entity* ent, int max_health, double ap_accumulation, int faction_id)
+    : MOB(ent, max_health, ap_accumulation, faction_id) {
 }
 
 void Enemy::take_turn() {

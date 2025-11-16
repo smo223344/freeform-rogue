@@ -282,8 +282,9 @@ int main() {
                 Entity* target_entity = find_entity_at(new_x, new_y);
                 bool took_action = false;
 
-                // If target has a MOB and it's not the player, attack it!
-                if (target_entity && target_entity->mob && target_entity != player) {
+                // If target has a MOB and it's hostile to the player, attack it!
+                if (target_entity && target_entity->mob && target_entity != player &&
+                    player->mob->is_hostile_to(target_entity->mob)) {
                     if (player->mob->can_act(MOB::ATTACK_COST)) {
                         CombatResult result = Combat::resolve_attack(player->mob, target_entity->mob);
                         player->mob->spend_ap(MOB::ATTACK_COST);

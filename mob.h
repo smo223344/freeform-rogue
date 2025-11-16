@@ -11,6 +11,11 @@ struct CombatResult;
 // MOB System - Mobile entities with HP and action points
 // ============================================================================
 
+// Faction constants
+constexpr int FACTION_NEUTRAL = 0;  // Neutral - doesn't attack anyone
+constexpr int FACTION_PLAYER = 1;   // Player and allies
+constexpr int FACTION_HOSTILE = 2;  // Generic hostile faction
+
 class MOB {
 public:
     Entity* entity;              // Associated entity
@@ -18,9 +23,14 @@ public:
     int max_hp;                  // Maximum hit points
     double ap_rate;              // Action points accumulated per turn
     double action_points;        // Current action points
+    int faction;                 // Faction ID (0=neutral, 1=player, 2+=hostile)
 
-    MOB(Entity* ent, int max_health, double ap_accumulation);
+    MOB(Entity* ent, int max_health, double ap_accumulation, int faction_id);
     virtual ~MOB() = default;
+
+    // Faction management
+    bool is_hostile_to(const MOB* other) const;
+    bool is_ally_of(const MOB* other) const;
 
     // Action point management
     void accumulate_ap();
@@ -68,7 +78,7 @@ public:
 
 class Enemy : public MOB {
 public:
-    Enemy(Entity* ent, int max_health, double ap_accumulation);
+    Enemy(Entity* ent, int max_health, double ap_accumulation, int faction_id = FACTION_HOSTILE);
 
     void take_turn() override;
 };
