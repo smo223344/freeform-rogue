@@ -1,6 +1,6 @@
 CXX = g++
 CXXFLAGS = -Wall -Wextra -std=c++17
-LDFLAGS = -lncurses -lm
+LDFLAGS = -lncursesw -lm
 
 TARGET = roguelike
 SRCS = roguelike.cpp entity.cpp mob.cpp combat.cpp

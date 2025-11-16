@@ -1,4 +1,5 @@
 #include <ncurses.h>
+#include <locale.h>
 #include <cmath>
 #include <vector>
 #include <cstdlib>
@@ -211,6 +212,9 @@ void create_sample_world() {
 // ============================================================================
 
 int main() {
+    // Set locale for Unicode/wide character support
+    setlocale(LC_ALL, "");
+
     // Seed random number generator for combat
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 
