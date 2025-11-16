@@ -1,49 +1,60 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
-#include <stdbool.h>
+#include <string>
 
 // ============================================================================
 // Entity System
 // ============================================================================
 
-typedef enum {
-    ENTITY_SCENERY,
-    ENTITY_ITEM,
-    ENTITY_MOB,
-    ENTITY_PET,
-    ENTITY_PROJECTILE,
-    ENTITY_ENVIRONMENTAL,
-    ENTITY_PLAYER
-} EntityType;
+enum class EntityType {
+    SCENERY,
+    ITEM,
+    MOB,
+    PET,
+    PROJECTILE,
+    ENVIRONMENTAL,
+    PLAYER
+};
 
-typedef struct {
+struct Position {
     double x;
     double y;
-} Position;
 
-typedef struct {
-    int id;                  // Unique identifier for this definition
-    char character;          // Display character
-    int color_pair;          // ncurses color pair index
-    EntityType type;         // Type of entity
-    bool passable;           // Can other entities move through this?
-    bool active;             // Is this definition active (for pooling)
-    char *name;              // Optional name for debugging
-} EntityDefinition;
+    Position() : x(0.0), y(0.0) {}
+    Position(double x_, double y_) : x(x_), y(y_) {}
+};
 
-typedef struct {
-    int id;                  // Unique identifier
-    Position pos;            // Floating-point position
-    int definition_id;       // Index into entity_definitions array
-    bool active;             // Is this entity instance active?
-} Entity;
+class EntityDefinition {
+public:
+    int id;                      // Unique identifier for this definition
+    char character;              // Display character
+    int color_pair;              // ncurses color pair index
+    EntityType type;             // Type of entity
+    bool passable;               // Can other entities move through this?
+    bool active;                 // Is this definition active (for pooling)
+    std::string name;            // Name for debugging/display
+
+    EntityDefinition();
+    void reset();
+};
+
+class Entity {
+public:
+    int id;                      // Unique identifier
+    Position pos;                // Floating-point position
+    int definition_id;           // Index into entity_definitions array
+    bool active;                 // Is this entity instance active?
+
+    Entity();
+    void reset();
+};
 
 // Entity management constants
-#define MAX_ENTITIES 1000
-#define MAX_ENTITY_DEFINITIONS 100
+constexpr int MAX_ENTITIES = 1000;
+constexpr int MAX_ENTITY_DEFINITIONS = 100;
 
-// Global entity storage (defined in entity.c)
+// Global entity storage (defined in entity.cpp)
 extern Entity entities[MAX_ENTITIES];
 extern EntityDefinition entity_definitions[MAX_ENTITY_DEFINITIONS];
 extern int next_entity_id;
@@ -56,19 +67,19 @@ extern int entity_definition_count;
 // ============================================================================
 
 // Initialization
-void init_entities(void);
+void init_entities();
 
 // Entity Definition Management
 EntityDefinition* create_entity_definition(char character, int color_pair,
-                                           EntityType type, bool passable, const char *name);
+                                           EntityType type, bool passable, const std::string& name);
 EntityDefinition* get_entity_definition(int definition_id);
-void destroy_entity_definition(EntityDefinition *def);
+void destroy_entity_definition(EntityDefinition* def);
 
 // Entity Management
 Entity* create_entity(double x, double y, char character, int color_pair,
-                      EntityType type, bool passable, const char *name);
-void destroy_entity(Entity *entity);
+                      EntityType type, bool passable, const std::string& name);
+void destroy_entity(Entity* entity);
 Entity* find_entity_at(double x, double y);
-bool is_position_passable(double x, double y, Entity *ignore);
+bool is_position_passable(double x, double y, Entity* ignore);
 
 #endif // ENTITY_H

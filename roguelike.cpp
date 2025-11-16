@@ -1,5 +1,5 @@
 #include <ncurses.h>
-#include <math.h>
+#include <cmath>
 #include "entity.h"
 
 // Color pair definitions
@@ -42,13 +42,13 @@ void init_colors() {
 // Coordinate Conversion
 // ============================================================================
 
-void world_to_screen(double world_x, double world_y, int *screen_x, int *screen_y) {
+void world_to_screen(double world_x, double world_y, int* screen_x, int* screen_y) {
     int max_y, max_x;
     getmaxyx(stdscr, max_y, max_x);
 
     // Round to nearest grid position
-    int grid_x = (int)round(world_x);
-    int grid_y = (int)round(world_y);
+    int grid_x = static_cast<int>(std::round(world_x));
+    int grid_y = static_cast<int>(std::round(world_y));
 
     // Convert to screen coordinates (centered at 0,0)
     *screen_x = max_x / 2 + grid_x;
@@ -59,7 +59,7 @@ void world_to_screen(double world_x, double world_y, int *screen_x, int *screen_
 // Rendering
 // ============================================================================
 
-void draw_map(Entity *player) {
+void draw_map(Entity* player) {
     int max_y, max_x;
     getmaxyx(stdscr, max_y, max_x);
 
@@ -88,8 +88,8 @@ void draw_map(Entity *player) {
     for (int i = 0; i < MAX_ENTITIES; i++) {
         if (!entities[i].active || &entities[i] == player) continue;
 
-        Entity *e = &entities[i];
-        EntityDefinition *def = get_entity_definition(e->definition_id);
+        Entity* e = &entities[i];
+        EntityDefinition* def = get_entity_definition(e->definition_id);
         if (!def) continue;  // Skip if definition missing
 
         int screen_x, screen_y;
@@ -104,7 +104,7 @@ void draw_map(Entity *player) {
 
     // Draw player last (so it's on top)
     if (player) {
-        EntityDefinition *player_def = get_entity_definition(player->definition_id);
+        EntityDefinition* player_def = get_entity_definition(player->definition_id);
         if (player_def) {
             int screen_x, screen_y;
             world_to_screen(player->pos.x, player->pos.y, &screen_x, &screen_y);
@@ -121,18 +121,18 @@ void draw_map(Entity *player) {
     attron(COLOR_PAIR(COLOR_PAIR_CYAN_BLACK));
     mvprintw(0, 0, "Position: (%.1f, %.1f) | Grid: (%d, %d) | Entities: %d | q to quit",
              player->pos.x, player->pos.y,
-             (int)round(player->pos.x), (int)round(player->pos.y),
+             static_cast<int>(std::round(player->pos.x)), static_cast<int>(std::round(player->pos.y)),
              entity_count);
     attroff(COLOR_PAIR(COLOR_PAIR_CYAN_BLACK));
 
     // Show entity info at player's position
-    Entity *at_player = find_entity_at(player->pos.x, player->pos.y);
+    Entity* at_player = find_entity_at(player->pos.x, player->pos.y);
     if (at_player && at_player != player) {
-        EntityDefinition *at_def = get_entity_definition(at_player->definition_id);
+        EntityDefinition* at_def = get_entity_definition(at_player->definition_id);
         if (at_def) {
             attron(COLOR_PAIR(COLOR_PAIR_YELLOW_BLACK));
             mvprintw(1, 0, "Here: %s (%c) - %s",
-                     at_def->name ? at_def->name : "Unknown",
+                     at_def->name.empty() ? "Unknown" : at_def->name.c_str(),
                      at_def->character,
                      at_def->passable ? "passable" : "impassable");
             attroff(COLOR_PAIR(COLOR_PAIR_YELLOW_BLACK));
@@ -148,33 +148,33 @@ void draw_map(Entity *player) {
 
 void create_sample_world() {
     // Create some scenery (trees)
-    create_entity(-5.0, 3.0, 'T', COLOR_PAIR_GREEN_BLACK, ENTITY_SCENERY, true, "Pine Tree");
-    create_entity(-3.0, 4.0, 'T', COLOR_PAIR_GREEN_BLACK, ENTITY_SCENERY, true, "Oak Tree");
-    create_entity(4.0, -2.0, 'T', COLOR_PAIR_GREEN_BLACK, ENTITY_SCENERY, true, "Maple Tree");
+    create_entity(-5.0, 3.0, 'T', COLOR_PAIR_GREEN_BLACK, EntityType::SCENERY, true, "Pine Tree");
+    create_entity(-3.0, 4.0, 'T', COLOR_PAIR_GREEN_BLACK, EntityType::SCENERY, true, "Oak Tree");
+    create_entity(4.0, -2.0, 'T', COLOR_PAIR_GREEN_BLACK, EntityType::SCENERY, true, "Maple Tree");
 
     // Create some walls (impassable)
     for (int x = -2; x <= 2; x++) {
-        create_entity((double)x, 5.0, '#', COLOR_PAIR_WHITE_BLACK, ENTITY_SCENERY, false, "Stone Wall");
+        create_entity(static_cast<double>(x), 5.0, '#', COLOR_PAIR_WHITE_BLACK, EntityType::SCENERY, false, "Stone Wall");
     }
     for (int y = -3; y <= 3; y++) {
-        create_entity(7.0, (double)y, '#', COLOR_PAIR_WHITE_BLACK, ENTITY_SCENERY, false, "Stone Wall");
+        create_entity(7.0, static_cast<double>(y), '#', COLOR_PAIR_WHITE_BLACK, EntityType::SCENERY, false, "Stone Wall");
     }
 
     // Create some items (passable)
-    create_entity(-4.0, -1.0, '$', COLOR_PAIR_YELLOW_BLACK, ENTITY_ITEM, true, "Gold Coin");
-    create_entity(2.0, 2.0, '!', COLOR_PAIR_MAGENTA_BLACK, ENTITY_ITEM, true, "Health Potion");
-    create_entity(-1.0, -3.0, '/', COLOR_PAIR_CYAN_BLACK, ENTITY_ITEM, true, "Sword");
+    create_entity(-4.0, -1.0, '$', COLOR_PAIR_YELLOW_BLACK, EntityType::ITEM, true, "Gold Coin");
+    create_entity(2.0, 2.0, '!', COLOR_PAIR_MAGENTA_BLACK, EntityType::ITEM, true, "Health Potion");
+    create_entity(-1.0, -3.0, '/', COLOR_PAIR_CYAN_BLACK, EntityType::ITEM, true, "Sword");
 
     // Create some mobs (impassable)
-    create_entity(-6.0, -4.0, 'g', COLOR_PAIR_GREEN_BLACK, ENTITY_MOB, false, "Goblin");
-    create_entity(5.0, 4.0, 'o', COLOR_PAIR_RED_BLACK, ENTITY_MOB, false, "Orc");
+    create_entity(-6.0, -4.0, 'g', COLOR_PAIR_GREEN_BLACK, EntityType::MOB, false, "Goblin");
+    create_entity(5.0, 4.0, 'o', COLOR_PAIR_RED_BLACK, EntityType::MOB, false, "Orc");
 
     // Create environmental hazards (passable but dangerous-looking)
-    create_entity(0.0, -5.0, '^', COLOR_PAIR_WHITE_RED, ENTITY_ENVIRONMENTAL, true, "Fire");
-    create_entity(3.0, -4.0, '~', COLOR_PAIR_GREEN_BLACK, ENTITY_ENVIRONMENTAL, true, "Acid Pool");
+    create_entity(0.0, -5.0, '^', COLOR_PAIR_WHITE_RED, EntityType::ENVIRONMENTAL, true, "Fire");
+    create_entity(3.0, -4.0, '~', COLOR_PAIR_GREEN_BLACK, EntityType::ENVIRONMENTAL, true, "Acid Pool");
 
     // Create a pet (passable)
-    create_entity(1.0, 1.0, 'd', COLOR_PAIR_YELLOW_BLACK, ENTITY_PET, true, "Dog");
+    create_entity(1.0, 1.0, 'd', COLOR_PAIR_YELLOW_BLACK, EntityType::PET, true, "Dog");
 }
 
 // ============================================================================
@@ -193,7 +193,7 @@ int main() {
     init_entities();
 
     // Create player
-    Entity *player = create_entity(0.0, 0.0, '@', COLOR_PAIR_WHITE_BLACK, ENTITY_PLAYER, false, "Player");
+    Entity* player = create_entity(0.0, 0.0, '@', COLOR_PAIR_WHITE_BLACK, EntityType::PLAYER, false, "Player");
 
     // Create sample world
     create_sample_world();

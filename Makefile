@@ -1,19 +1,19 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -std=c99
+CXX = g++
+CXXFLAGS = -Wall -Wextra -std=c++17
 LDFLAGS = -lncurses -lm
 
 TARGET = roguelike
-SRCS = roguelike.c entity.c
-OBJS = $(SRCS:.c=.o)
+SRCS = roguelike.cpp entity.cpp
+OBJS = $(SRCS:.cpp=.o)
 HEADERS = entity.h
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
 
-%.o: %.c $(HEADERS)
-	$(CC) $(CFLAGS) -c $< -o $@
+%.o: %.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(TARGET) $(OBJS)
