@@ -35,7 +35,7 @@ void EntityDefinition::reset() {
 // ============================================================================
 
 Entity::Entity()
-    : id(-1), pos(), definition_id(-1), active(false) {
+    : id(-1), pos(), definition_id(-1), active(false), mob(nullptr) {
 }
 
 void Entity::reset() {
@@ -43,6 +43,7 @@ void Entity::reset() {
     pos = Position();
     definition_id = -1;
     active = false;
+    mob = nullptr;  // Note: caller responsible for deleting MOB if needed
 }
 
 // ============================================================================

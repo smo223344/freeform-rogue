@@ -1,6 +1,11 @@
 #include <ncurses.h>
 #include <cmath>
+#include <vector>
 #include "entity.h"
+#include "mob.h"
+
+// Global MOB storage
+std::vector<MOB*> mobs;
 
 // Color pair definitions
 #define COLOR_PAIR_WHITE_BLACK   1
@@ -123,10 +128,18 @@ void draw_map(Entity* player) {
     for (const auto& e : entities) {
         if (e.active) active_count++;
     }
-    mvprintw(0, 0, "Position: (%.1f, %.1f) | Grid: (%d, %d) | Entities: %d | q to quit",
-             player->pos.x, player->pos.y,
-             static_cast<int>(std::round(player->pos.x)), static_cast<int>(std::round(player->pos.y)),
-             active_count);
+
+    // Display player stats if player has a MOB
+    if (player->mob) {
+        mvprintw(0, 0, "HP: %d/%d | AP: %.0f | Pos: (%.1f, %.1f) | q to quit",
+                 player->mob->hp, player->mob->max_hp, player->mob->action_points,
+                 player->pos.x, player->pos.y);
+    } else {
+        mvprintw(0, 0, "Position: (%.1f, %.1f) | Grid: (%d, %d) | Entities: %d | q to quit",
+                 player->pos.x, player->pos.y,
+                 static_cast<int>(std::round(player->pos.x)), static_cast<int>(std::round(player->pos.y)),
+                 active_count);
+    }
     attroff(COLOR_PAIR(COLOR_PAIR_CYAN_BLACK));
 
     // Show entity info at player's position
@@ -169,9 +182,18 @@ void create_sample_world() {
     create_entity(2.0, 2.0, '!', COLOR_PAIR_MAGENTA_BLACK, EntityType::ITEM, true, "Health Potion");
     create_entity(-1.0, -3.0, '/', COLOR_PAIR_CYAN_BLACK, EntityType::ITEM, true, "Sword");
 
-    // Create some mobs (impassable)
-    create_entity(-6.0, -4.0, 'g', COLOR_PAIR_GREEN_BLACK, EntityType::MOB, false, "Goblin");
-    create_entity(5.0, 4.0, 'o', COLOR_PAIR_RED_BLACK, EntityType::MOB, false, "Orc");
+    // Create some mobs (impassable) with AI
+    Entity* goblin = create_entity(-6.0, -4.0, 'g', COLOR_PAIR_GREEN_BLACK, EntityType::MOB, false, "Goblin");
+    if (goblin) {
+        goblin->mob = new Enemy(goblin, 50, 80.0);  // 50 HP, 80 AP per turn
+        mobs.push_back(goblin->mob);
+    }
+
+    Entity* orc = create_entity(5.0, 4.0, 'o', COLOR_PAIR_RED_BLACK, EntityType::MOB, false, "Orc");
+    if (orc) {
+        orc->mob = new Enemy(orc, 80, 70.0);  // 80 HP, 70 AP per turn (slower but tougher)
+        mobs.push_back(orc->mob);
+    }
 
     // Create environmental hazards (passable but dangerous-looking)
     create_entity(0.0, -5.0, '^', COLOR_PAIR_WHITE_RED, EntityType::ENVIRONMENTAL, true, "Fire");
@@ -198,6 +220,10 @@ int main() {
 
     // Create player
     Entity* player = create_entity(0.0, 0.0, '@', COLOR_PAIR_WHITE_BLACK, EntityType::PLAYER, false, "Player");
+    if (player) {
+        player->mob = new Player(player);
+        mobs.push_back(player->mob);
+    }
 
     // Create sample world
     create_sample_world();
@@ -239,18 +265,40 @@ int main() {
                 break;
         }
 
-        // Check if new position is passable
+        // Process movement if player tried to move
         if (new_x != player->pos.x || new_y != player->pos.y) {
-            if (is_position_passable(new_x, new_y, player)) {
-                player->pos.x = new_x;
-                player->pos.y = new_y;
+            if (player->mob && player->mob->can_act(MOB::MOVE_COST)) {
+                if (is_position_passable(new_x, new_y, player)) {
+                    player->pos.x = new_x;
+                    player->pos.y = new_y;
+                    player->mob->spend_ap(MOB::MOVE_COST);
+
+                    // Process all MOB turns (enemies get their action points)
+                    for (auto* mob : mobs) {
+                        if (mob != player->mob) {
+                            mob->take_turn();
+                        }
+                    }
+                }
             }
+        }
+
+        // Give player action points each frame
+        if (player->mob) {
+            player->mob->accumulate_ap();
         }
 
         draw_map(player);
     }
 
     // Clean up
+    // Delete all MOBs
+    for (auto* mob : mobs) {
+        delete mob;
+    }
+    mobs.clear();
+
+    // Clean up entities
     for (auto& e : entities) {
         if (e.active) {
             destroy_entity(&e);

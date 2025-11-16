@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+// Forward declaration
+class MOB;
+
 // ============================================================================
 // Entity System
 // ============================================================================
@@ -46,6 +49,7 @@ public:
     Position pos;                // Floating-point position
     int definition_id;           // Index into entity_definitions array
     bool active;                 // Is this entity instance active?
+    MOB* mob;                    // Optional MOB (for entities with HP/AI)
 
     Entity();
     void reset();
