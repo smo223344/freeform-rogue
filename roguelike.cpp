@@ -81,19 +81,120 @@ void world_to_screen(double world_x, double world_y, int* screen_x, int* screen_
 // Rendering
 // ============================================================================
 
+void draw_status_panel(Entity* player) {
+    if (!player || !player->mob) return;
+
+    int max_y, max_x;
+    getmaxyx(stdscr, max_y, max_x);
+
+    // Status panel on the right side
+    const int panel_width = 25;
+    const int panel_x = max_x - panel_width;
+
+    // Draw border
+    attron(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK) | A_BOLD);
+    for (int y = 0; y < max_y; y++) {
+        mvaddch(y, panel_x - 1, '|');
+    }
+    attroff(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK) | A_BOLD);
+
+    // Player name/title
+    attron(COLOR_PAIR(COLOR_PAIR_CYAN_BLACK) | A_BOLD);
+    mvprintw(1, panel_x + 1, "=== PLAYER ===");
+    attroff(COLOR_PAIR(COLOR_PAIR_CYAN_BLACK) | A_BOLD);
+
+    // HP display with bar
+    int hp_percent = (player->mob->hp * 100) / player->mob->max_hp;
+    int bar_width = 15;
+    int filled = (hp_percent * bar_width) / 100;
+
+    attron(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+    mvprintw(3, panel_x + 1, "Health:");
+    attroff(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+
+    // Color HP bar based on percentage
+    int hp_color = COLOR_PAIR_GREEN_BLACK;
+    if (hp_percent < 30) {
+        hp_color = COLOR_PAIR_RED_BLACK;
+    } else if (hp_percent < 60) {
+        hp_color = COLOR_PAIR_YELLOW_BLACK;
+    }
+
+    attron(COLOR_PAIR(hp_color) | A_BOLD);
+    mvprintw(4, panel_x + 1, "[");
+    for (int i = 0; i < bar_width; i++) {
+        if (i < filled) {
+            addch('=');
+        } else {
+            addch(' ');
+        }
+    }
+    addch(']');
+    attroff(COLOR_PAIR(hp_color) | A_BOLD);
+
+    // HP numbers
+    attron(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+    mvprintw(5, panel_x + 1, "%d / %d", player->mob->hp, player->mob->max_hp);
+    attroff(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+
+    // Action Points
+    attron(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+    mvprintw(7, panel_x + 1, "Action Points:");
+    mvprintw(8, panel_x + 1, "%.0f", player->mob->action_points);
+    attroff(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+
+    // Position
+    attron(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+    mvprintw(10, panel_x + 1, "Position:");
+    mvprintw(11, panel_x + 1, "X: %.1f", player->pos.x);
+    mvprintw(12, panel_x + 1, "Y: %.1f", player->pos.y);
+    attroff(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+
+    // Faction
+    const char* faction_name = "Unknown";
+    if (player->mob->faction == FACTION_PLAYER) {
+        faction_name = "Player";
+    } else if (player->mob->faction == FACTION_NEUTRAL) {
+        faction_name = "Neutral";
+    } else if (player->mob->faction == FACTION_HOSTILE) {
+        faction_name = "Hostile";
+    }
+
+    attron(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+    mvprintw(14, panel_x + 1, "Faction:");
+    mvprintw(15, panel_x + 1, "%s", faction_name);
+    attroff(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+
+    // Controls at bottom of panel
+    attron(COLOR_PAIR(COLOR_PAIR_YELLOW_BLACK));
+    mvprintw(max_y - 6, panel_x + 1, "--- CONTROLS ---");
+    attroff(COLOR_PAIR(COLOR_PAIR_YELLOW_BLACK));
+
+    attron(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+    mvprintw(max_y - 4, panel_x + 1, "WASD/Arrows: Move");
+    mvprintw(max_y - 3, panel_x + 1, "Bump: Attack");
+    mvprintw(max_y - 2, panel_x + 1, "Q: Quit");
+    attroff(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+}
+
 void draw_map(Entity* player) {
     int max_y, max_x;
     getmaxyx(stdscr, max_y, max_x);
 
     clear();
 
+    // Status panel dimensions
+    const int panel_width = 25;
+    const int panel_x = max_x - panel_width;
+    const int map_max_x = panel_x - 1;  // Don't draw into the panel area
+
     // Draw coordinate axes (optional, for visual reference)
     int center_x = max_x / 2;
     int center_y = max_y / 2;
 
     attron(COLOR_PAIR(COLOR_PAIR_BLUE_BLACK) | A_DIM);
-    // Draw horizontal axis
-    for (int x = 0; x < max_x; x++) {
+    // Draw horizontal axis (but not in the panel area)
+    for (int x = 0; x < map_max_x; x++) {
         mvaddch(center_y, x, '-');
     }
 
@@ -116,7 +217,8 @@ void draw_map(Entity* player) {
         int screen_x, screen_y;
         world_to_screen(e.pos.x, e.pos.y, &screen_x, &screen_y);
 
-        if (screen_x >= 0 && screen_x < max_x && screen_y >= 0 && screen_y < max_y) {
+        // Don't draw in the status panel area
+        if (screen_x >= 0 && screen_x < map_max_x && screen_y >= 0 && screen_y < max_y) {
             attron(COLOR_PAIR(def->color_pair));
             mvaddch(screen_y, screen_x, def->character);
             attroff(COLOR_PAIR(def->color_pair));
@@ -130,7 +232,8 @@ void draw_map(Entity* player) {
             int screen_x, screen_y;
             world_to_screen(player->pos.x, player->pos.y, &screen_x, &screen_y);
 
-            if (screen_x >= 0 && screen_x < max_x && screen_y >= 0 && screen_y < max_y) {
+            // Don't draw in the status panel area
+            if (screen_x >= 0 && screen_x < map_max_x && screen_y >= 0 && screen_y < max_y) {
                 attron(COLOR_PAIR(player_def->color_pair) | A_BOLD);
                 mvaddch(screen_y, screen_x, player_def->character);
                 attroff(COLOR_PAIR(player_def->color_pair) | A_BOLD);
@@ -138,26 +241,10 @@ void draw_map(Entity* player) {
         }
     }
 
-    // Display info
-    attron(COLOR_PAIR(COLOR_PAIR_CYAN_BLACK));
-    // Count active entities
-    int active_count = 0;
-    for (const auto& e : entities) {
-        if (e.active) active_count++;
-    }
-
-    // Display player stats if player has a MOB
-    if (player->mob) {
-        mvprintw(0, 0, "HP: %d/%d | AP: %.0f | Pos: (%.1f, %.1f) | q to quit",
-                 player->mob->hp, player->mob->max_hp, player->mob->action_points,
-                 player->pos.x, player->pos.y);
-    } else {
-        mvprintw(0, 0, "Position: (%.1f, %.1f) | Grid: (%d, %d) | Entities: %d | q to quit",
-                 player->pos.x, player->pos.y,
-                 static_cast<int>(std::round(player->pos.x)), static_cast<int>(std::round(player->pos.y)),
-                 active_count);
-    }
-    attroff(COLOR_PAIR(COLOR_PAIR_CYAN_BLACK));
+    // Display simple title bar
+    attron(COLOR_PAIR(COLOR_PAIR_CYAN_BLACK) | A_BOLD);
+    mvprintw(0, 1, "Roguelike Dungeon");
+    attroff(COLOR_PAIR(COLOR_PAIR_CYAN_BLACK) | A_BOLD);
 
     // Show entity info at player's position
     Entity* at_player = find_entity_at(player->pos.x, player->pos.y);
@@ -173,7 +260,7 @@ void draw_map(Entity* player) {
         }
     }
 
-    // Display message log at the bottom of the screen
+    // Display message log at the bottom of the screen (but not in panel area)
     const int log_lines = 5;  // Show last 5 messages
     int log_start_y = max_y - log_lines;
     int msg_index = 0;
@@ -184,10 +271,16 @@ void draw_map(Entity* player) {
 
     attron(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
     for (size_t i = start_msg; i < message_log.size(); i++) {
+        // Clear the line first to avoid leftover text
+        move(log_start_y + msg_index, 0);
+        clrtoeol();
         mvprintw(log_start_y + msg_index, 0, "%s", message_log[i].c_str());
         msg_index++;
     }
     attroff(COLOR_PAIR(COLOR_PAIR_WHITE_BLACK));
+
+    // Draw status panel on the right side
+    draw_status_panel(player);
 
     refresh();
 }
