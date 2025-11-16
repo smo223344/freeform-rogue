@@ -14,9 +14,9 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 TARGET = roguelike
-SRCS = roguelike.cpp entity.cpp mob.cpp combat.cpp
+SRCS = roguelike.cpp entity.cpp mob.cpp combat.cpp pathfinding.cpp
 OBJS = $(SRCS:.cpp=.o)
-HEADERS = entity.h mob.h combat.h
+HEADERS = entity.h mob.h combat.h pathfinding.h
 
 all: $(TARGET)
 
