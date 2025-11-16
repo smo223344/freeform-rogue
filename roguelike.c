@@ -25,26 +25,27 @@ typedef struct {
 } Position;
 
 typedef struct {
-    int id;
+    int id;                  // Unique identifier for this definition
     char character;          // Display character
     int color_pair;          // ncurses color pair index
     EntityType type;         // Type of entity
     bool passable;           // Can other entities move through this?
-    bool active;             // Is this entity active (for pooling)
+    bool active;             // Is this definition active (for pooling)
     char *name;              // Optional name for debugging
 } EntityDefinition;
-#define MAX_ENTITY_DEFINITIONS 1000
-EntityDefinition entity_definitions[MAX_ENTITY_DEFINITIONS]
 
 typedef struct {
     int id;                  // Unique identifier
     Position pos;            // Floating-point position
-    int definition_id;       // Index into entity_definitions 
+    int definition_id;       // Index into entity_definitions array
+    bool active;             // Is this entity instance active?
 } Entity;
 
 // Entity management
 #define MAX_ENTITIES 1000
+#define MAX_ENTITY_DEFINITIONS 100
 Entity entities[MAX_ENTITIES];
+EntityDefinition entity_definitions[MAX_ENTITY_DEFINITIONS];
 int next_entity_id = 0;
 int entity_count = 0;
 int next_entity_definition_id = 0;
@@ -89,12 +90,63 @@ void init_colors() {
 void init_entities() {
     for (int i = 0; i < MAX_ENTITIES; i++) {
         entities[i].active = false;
-        entities[i].name = NULL;
-	entities[i].id = -1;
+        entities[i].id = -1;
+        entities[i].definition_id = -1;
     }
     for (int i = 0; i < MAX_ENTITY_DEFINITIONS; i++) {
-        entity_definitions[i] = -1;
+        entity_definitions[i].active = false;
+        entity_definitions[i].id = -1;
+        entity_definitions[i].name = NULL;
     }
+}
+
+// ============================================================================
+// Entity Definition Management
+// ============================================================================
+
+EntityDefinition* create_entity_definition(char character, int color_pair,
+                                           EntityType type, bool passable, const char *name) {
+    if (entity_definition_count >= MAX_ENTITY_DEFINITIONS) {
+        return NULL;  // Definition pool full
+    }
+
+    // Find first inactive slot
+    int slot = -1;
+    for (int i = 0; i < MAX_ENTITY_DEFINITIONS; i++) {
+        if (!entity_definitions[i].active) {
+            slot = i;
+            break;
+        }
+    }
+
+    if (slot == -1) return NULL;
+
+    EntityDefinition *def = &entity_definitions[slot];
+    def->id = next_entity_definition_id++;
+    def->character = character;
+    def->color_pair = color_pair;
+    def->type = type;
+    def->passable = passable;
+    def->active = true;
+
+    if (name) {
+        def->name = strdup(name);
+    } else {
+        def->name = NULL;
+    }
+
+    entity_definition_count++;
+    return def;
+}
+
+EntityDefinition* get_entity_definition(int definition_id) {
+    if (definition_id < 0 || definition_id >= MAX_ENTITY_DEFINITIONS) {
+        return NULL;
+    }
+    if (!entity_definitions[definition_id].active) {
+        return NULL;
+    }
+    return &entity_definitions[definition_id];
 }
 
 // ============================================================================
@@ -107,7 +159,13 @@ Entity* create_entity(double x, double y, char character, int color_pair,
         return NULL;  // Entity pool full
     }
 
-    // Find first inactive slot
+    // Create entity definition
+    EntityDefinition *def = create_entity_definition(character, color_pair, type, passable, name);
+    if (!def) {
+        return NULL;  // Failed to create definition
+    }
+
+    // Find first inactive slot for entity
     int slot = -1;
     for (int i = 0; i < MAX_ENTITIES; i++) {
         if (!entities[i].active) {
@@ -122,17 +180,8 @@ Entity* create_entity(double x, double y, char character, int color_pair,
     e->id = next_entity_id++;
     e->pos.x = x;
     e->pos.y = y;
-    e->character = character;
-    e->color_pair = color_pair;
-    e->type = type;
-    e->passable = passable;
+    e->definition_id = def->id;
     e->active = true;
-
-    if (name) {
-        e->name = strdup(name);
-    } else {
-        e->name = NULL;
-    }
 
     entity_count++;
     return e;
@@ -140,12 +189,20 @@ Entity* create_entity(double x, double y, char character, int color_pair,
 
 void destroy_entity(Entity *entity) {
     if (entity && entity->active) {
-        if (entity->name) {
-            free(entity->name);
-            entity->name = NULL;
-        }
         entity->active = false;
+        entity->definition_id = -1;
         entity_count--;
+    }
+}
+
+void destroy_entity_definition(EntityDefinition *def) {
+    if (def && def->active) {
+        if (def->name) {
+            free(def->name);
+            def->name = NULL;
+        }
+        def->active = false;
+        entity_definition_count--;
     }
 }
 
@@ -174,8 +231,11 @@ bool is_position_passable(double x, double y, Entity *ignore) {
     // Ignore specific entity (e.g., don't collide with self)
     if (entity == ignore) return true;
 
-    // Check if entity is passable
-    return entity->passable;
+    // Get entity definition and check if passable
+    EntityDefinition *def = get_entity_definition(entity->definition_id);
+    if (!def) return true;  // If definition missing, assume passable
+
+    return def->passable;
 }
 
 // ============================================================================
@@ -229,25 +289,31 @@ void draw_map(Entity *player) {
         if (!entities[i].active || &entities[i] == player) continue;
 
         Entity *e = &entities[i];
+        EntityDefinition *def = get_entity_definition(e->definition_id);
+        if (!def) continue;  // Skip if definition missing
+
         int screen_x, screen_y;
         world_to_screen(e->pos.x, e->pos.y, &screen_x, &screen_y);
 
         if (screen_x >= 0 && screen_x < max_x && screen_y >= 0 && screen_y < max_y) {
-            attron(COLOR_PAIR(e->color_pair));
-            mvaddch(screen_y, screen_x, e->character);
-            attroff(COLOR_PAIR(e->color_pair));
+            attron(COLOR_PAIR(def->color_pair));
+            mvaddch(screen_y, screen_x, def->character);
+            attroff(COLOR_PAIR(def->color_pair));
         }
     }
 
     // Draw player last (so it's on top)
     if (player) {
-        int screen_x, screen_y;
-        world_to_screen(player->pos.x, player->pos.y, &screen_x, &screen_y);
+        EntityDefinition *player_def = get_entity_definition(player->definition_id);
+        if (player_def) {
+            int screen_x, screen_y;
+            world_to_screen(player->pos.x, player->pos.y, &screen_x, &screen_y);
 
-        if (screen_x >= 0 && screen_x < max_x && screen_y >= 0 && screen_y < max_y) {
-            attron(COLOR_PAIR(player->color_pair) | A_BOLD);
-            mvaddch(screen_y, screen_x, player->character);
-            attroff(COLOR_PAIR(player->color_pair) | A_BOLD);
+            if (screen_x >= 0 && screen_x < max_x && screen_y >= 0 && screen_y < max_y) {
+                attron(COLOR_PAIR(player_def->color_pair) | A_BOLD);
+                mvaddch(screen_y, screen_x, player_def->character);
+                attroff(COLOR_PAIR(player_def->color_pair) | A_BOLD);
+            }
         }
     }
 
@@ -262,12 +328,15 @@ void draw_map(Entity *player) {
     // Show entity info at player's position
     Entity *at_player = find_entity_at(player->pos.x, player->pos.y);
     if (at_player && at_player != player) {
-        attron(COLOR_PAIR(COLOR_PAIR_YELLOW_BLACK));
-        mvprintw(1, 0, "Here: %s (%c) - %s",
-                 at_player->name ? at_player->name : "Unknown",
-                 at_player->character,
-                 at_player->passable ? "passable" : "impassable");
-        attroff(COLOR_PAIR(COLOR_PAIR_YELLOW_BLACK));
+        EntityDefinition *at_def = get_entity_definition(at_player->definition_id);
+        if (at_def) {
+            attron(COLOR_PAIR(COLOR_PAIR_YELLOW_BLACK));
+            mvprintw(1, 0, "Here: %s (%c) - %s",
+                     at_def->name ? at_def->name : "Unknown",
+                     at_def->character,
+                     at_def->passable ? "passable" : "impassable");
+            attroff(COLOR_PAIR(COLOR_PAIR_YELLOW_BLACK));
+        }
     }
 
     refresh();
@@ -381,6 +450,11 @@ int main() {
     for (int i = 0; i < MAX_ENTITIES; i++) {
         if (entities[i].active) {
             destroy_entity(&entities[i]);
+        }
+    }
+    for (int i = 0; i < MAX_ENTITY_DEFINITIONS; i++) {
+        if (entity_definitions[i].active) {
+            destroy_entity_definition(&entity_definitions[i]);
         }
     }
 
