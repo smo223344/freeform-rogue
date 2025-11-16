@@ -2,6 +2,7 @@
 #define ENTITY_H
 
 #include <string>
+#include <vector>
 
 // ============================================================================
 // Entity System
@@ -55,10 +56,9 @@ constexpr int MAX_ENTITIES = 1000;
 constexpr int MAX_ENTITY_DEFINITIONS = 100;
 
 // Global entity storage (defined in entity.cpp)
-extern Entity entities[MAX_ENTITIES];
+extern std::vector<Entity> entities;
 extern EntityDefinition entity_definitions[MAX_ENTITY_DEFINITIONS];
 extern int next_entity_id;
-extern int entity_count;
 extern int next_entity_definition_id;
 extern int entity_definition_count;
 

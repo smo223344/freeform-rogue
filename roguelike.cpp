@@ -85,15 +85,14 @@ void draw_map(Entity* player) {
     attroff(COLOR_PAIR(COLOR_PAIR_BLUE_BLACK) | A_DIM);
 
     // Draw all entities (except player, who we draw last)
-    for (int i = 0; i < MAX_ENTITIES; i++) {
-        if (!entities[i].active || &entities[i] == player) continue;
+    for (auto& e : entities) {
+        if (!e.active || &e == player) continue;
 
-        Entity* e = &entities[i];
-        EntityDefinition* def = get_entity_definition(e->definition_id);
+        EntityDefinition* def = get_entity_definition(e.definition_id);
         if (!def) continue;  // Skip if definition missing
 
         int screen_x, screen_y;
-        world_to_screen(e->pos.x, e->pos.y, &screen_x, &screen_y);
+        world_to_screen(e.pos.x, e.pos.y, &screen_x, &screen_y);
 
         if (screen_x >= 0 && screen_x < max_x && screen_y >= 0 && screen_y < max_y) {
             attron(COLOR_PAIR(def->color_pair));
@@ -119,10 +118,15 @@ void draw_map(Entity* player) {
 
     // Display info
     attron(COLOR_PAIR(COLOR_PAIR_CYAN_BLACK));
+    // Count active entities
+    int active_count = 0;
+    for (const auto& e : entities) {
+        if (e.active) active_count++;
+    }
     mvprintw(0, 0, "Position: (%.1f, %.1f) | Grid: (%d, %d) | Entities: %d | q to quit",
              player->pos.x, player->pos.y,
              static_cast<int>(std::round(player->pos.x)), static_cast<int>(std::round(player->pos.y)),
-             entity_count);
+             active_count);
     attroff(COLOR_PAIR(COLOR_PAIR_CYAN_BLACK));
 
     // Show entity info at player's position
@@ -247,9 +251,9 @@ int main() {
     }
 
     // Clean up
-    for (int i = 0; i < MAX_ENTITIES; i++) {
-        if (entities[i].active) {
-            destroy_entity(&entities[i]);
+    for (auto& e : entities) {
+        if (e.active) {
+            destroy_entity(&e);
         }
     }
     for (int i = 0; i < MAX_ENTITY_DEFINITIONS; i++) {
