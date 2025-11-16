@@ -25,14 +25,21 @@ typedef struct {
 } Position;
 
 typedef struct {
-    int id;                  // Unique identifier
-    Position pos;            // Floating-point position
+    int id;
     char character;          // Display character
     int color_pair;          // ncurses color pair index
     EntityType type;         // Type of entity
     bool passable;           // Can other entities move through this?
     bool active;             // Is this entity active (for pooling)
     char *name;              // Optional name for debugging
+} EntityDefinition;
+#define MAX_ENTITY_DEFINITIONS 1000
+EntityDefinition entity_definitions[MAX_ENTITY_DEFINITIONS]
+
+typedef struct {
+    int id;                  // Unique identifier
+    Position pos;            // Floating-point position
+    int definition_id;       // Index into entity_definitions 
 } Entity;
 
 // Entity management
@@ -40,6 +47,8 @@ typedef struct {
 Entity entities[MAX_ENTITIES];
 int next_entity_id = 0;
 int entity_count = 0;
+int next_entity_definition_id = 0;
+int entity_definition_count = 0;
 
 // Color pair definitions
 #define COLOR_PAIR_WHITE_BLACK   1
@@ -81,6 +90,10 @@ void init_entities() {
     for (int i = 0; i < MAX_ENTITIES; i++) {
         entities[i].active = false;
         entities[i].name = NULL;
+	entities[i].id = -1;
+    }
+    for (int i = 0; i < MAX_ENTITY_DEFINITIONS; i++) {
+        entity_definitions[i] = -1;
     }
 }
 
