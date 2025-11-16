@@ -1,8 +1,11 @@
 #include <ncurses.h>
 #include <cmath>
 #include <vector>
+#include <cstdlib>
+#include <ctime>
 #include "entity.h"
 #include "mob.h"
+#include "combat.h"
 
 // Global MOB storage
 std::vector<MOB*> mobs;
@@ -208,6 +211,9 @@ void create_sample_world() {
 // ============================================================================
 
 int main() {
+    // Seed random number generator for combat
+    std::srand(static_cast<unsigned>(std::time(nullptr)));
+
     // Initialize ncurses
     initscr();
     cbreak();              // Disable line buffering
@@ -265,17 +271,40 @@ int main() {
                 break;
         }
 
-        // Process movement if player tried to move
+        // Process movement/attack if player tried to move
         if (new_x != player->pos.x || new_y != player->pos.y) {
-            if (player->mob && player->mob->can_act(MOB::MOVE_COST)) {
-                if (is_position_passable(new_x, new_y, player)) {
-                    player->pos.x = new_x;
-                    player->pos.y = new_y;
-                    player->mob->spend_ap(MOB::MOVE_COST);
+            if (player->mob) {
+                // Check if there's an entity at the target position
+                Entity* target_entity = find_entity_at(new_x, new_y);
+                bool took_action = false;
 
-                    // Process all MOB turns (enemies get their action points)
+                // If target has a MOB and it's not the player, attack it!
+                if (target_entity && target_entity->mob && target_entity != player) {
+                    if (player->mob->can_act(MOB::ATTACK_COST)) {
+                        CombatResult result = Combat::resolve_attack(player->mob, target_entity->mob);
+                        player->mob->spend_ap(MOB::ATTACK_COST);
+                        took_action = true;
+
+                        // If we killed the target, destroy its entity
+                        if (result.target_killed && target_entity->mob) {
+                            destroy_entity(target_entity);
+                        }
+                    }
+                }
+                // Otherwise, try to move
+                else if (player->mob->can_act(MOB::MOVE_COST)) {
+                    if (is_position_passable(new_x, new_y, player)) {
+                        player->pos.x = new_x;
+                        player->pos.y = new_y;
+                        player->mob->spend_ap(MOB::MOVE_COST);
+                        took_action = true;
+                    }
+                }
+
+                // If player took an action, process enemy turns
+                if (took_action) {
                     for (auto* mob : mobs) {
-                        if (mob != player->mob) {
+                        if (mob != player->mob && mob->is_alive()) {
                             mob->take_turn();
                         }
                     }

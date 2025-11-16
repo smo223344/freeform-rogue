@@ -3,6 +3,10 @@
 
 #include "entity.h"
 
+// Forward declarations
+struct CombatStats;
+struct CombatResult;
+
 // ============================================================================
 // MOB System - Mobile entities with HP and action points
 // ============================================================================
@@ -26,6 +30,15 @@ public:
     // Combat
     virtual void take_damage(int damage);
     bool is_alive() const;
+
+    // Combat hooks - can be overridden for items/skills/buffs
+    // These allow extensibility for equipment, passive abilities, etc.
+    virtual void modify_attack_stats(CombatStats& stats) const;
+    virtual void modify_defense_stats(CombatStats& stats) const;
+    virtual void on_attack(MOB* target, CombatResult& result);
+    virtual void on_defend(MOB* attacker, const CombatResult& result);
+    virtual void on_kill(MOB* target);
+    virtual void on_death(MOB* killer);
 
     // Actions - to be overridden by subclasses
     virtual void take_turn() = 0;  // Pure virtual - must be implemented

@@ -3,9 +3,9 @@ CXXFLAGS = -Wall -Wextra -std=c++17
 LDFLAGS = -lncurses -lm
 
 TARGET = roguelike
-SRCS = roguelike.cpp entity.cpp mob.cpp
+SRCS = roguelike.cpp entity.cpp mob.cpp combat.cpp
 OBJS = $(SRCS:.cpp=.o)
-HEADERS = entity.h mob.h
+HEADERS = entity.h mob.h combat.h
 
 all: $(TARGET)
 

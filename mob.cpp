@@ -1,4 +1,5 @@
 #include "mob.h"
+#include "combat.h"
 
 // ============================================================================
 // MOB Base Class
@@ -33,6 +34,39 @@ void MOB::take_damage(int damage) {
 
 bool MOB::is_alive() const {
     return hp > 0;
+}
+
+// Combat hooks - default implementations (can be overridden)
+void MOB::modify_attack_stats(CombatStats& stats) const {
+    // Default: no modifications
+    (void)stats;  // Suppress unused parameter warning
+}
+
+void MOB::modify_defense_stats(CombatStats& stats) const {
+    // Default: no modifications
+    (void)stats;
+}
+
+void MOB::on_attack(MOB* target, CombatResult& result) {
+    // Default: no special effects
+    (void)target;
+    (void)result;
+}
+
+void MOB::on_defend(MOB* attacker, const CombatResult& result) {
+    // Default: no special effects
+    (void)attacker;
+    (void)result;
+}
+
+void MOB::on_kill(MOB* target) {
+    // Default: no special effects
+    (void)target;
+}
+
+void MOB::on_death(MOB* killer) {
+    // Default: no special effects
+    (void)killer;
 }
 
 // ============================================================================
